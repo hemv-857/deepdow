@@ -450,8 +450,8 @@ class TestAllLosses:
         )
 
         a = SharpeRatio()
-        b = Variance()
-        c = MaxDrawdown()
+        b = StandardDeviation()
+        c = MaximumDrawdown()
 
         # a - (b - c): nested subtraction must preserve grouping
         nested = a - (b - c)
@@ -460,6 +460,33 @@ class TestAllLosses:
         assert torch.allclose(
             nested(weights, y_dummy), nested_recreated(weights, y_dummy)
         )
+
+    def test_rsub_with_loss_subclass(self, Xy_dummy):
+        _, y_dummy, _, _ = Xy_dummy
+        n_samples, n_channels, horizon, n_assets = y_dummy.shape
+
+        weights = (torch.ones(n_samples, n_assets) / n_assets).to(
+            device=y_dummy.device, dtype=y_dummy.dtype
+        )
+
+        class MyLoss(Loss):
+            def _call(self, weights, y):
+                return torch.zeros(n_samples, device=weights.device, dtype=weights.dtype)
+
+            def _repr(self):
+                return "MyLoss()"
+
+        # When a Loss subclass is on the right, Python may dispatch to
+        # __rsub__ on the subclass. Verify this works.
+        base = SharpeRatio()
+        sub = MyLoss()
+        result = base - sub
+
+        true_tensor = base(weights, y_dummy) - sub(weights, y_dummy)
+        result_tensor = result(weights, y_dummy)
+
+        assert torch.is_tensor(result_tensor)
+        assert torch.allclose(result_tensor, true_tensor)
 
     @pytest.mark.parametrize(
         "loss_class", ALL_LOSSES, ids=[x.__name__ for x in ALL_LOSSES]

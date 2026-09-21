@@ -351,19 +351,36 @@ class Loss:
             raise TypeError("Unsupported type: {}".format(type(other)))
 
     def __rsub__(self, other):
-        """Subtract this loss from a constant.
+        """Subtract this loss from a constant or another loss.
 
         Parameters
         ----------
         other : Loss or int or float
-            If a number then create a new loss that is equal to `other` minus `self`.
+            If instance of ``Loss`` then creates a new loss that represents
+            ``other - self``. If a number then create a new loss that is equal
+            to ``other - self``.
 
         Returns
         -------
         new : Loss
             Instance of a ``Loss`` representing the subtraction operation.
         """
-        if isinstance(other, (int, float)):
+        if isinstance(other, Loss):
+            new_instance = Loss()
+            new_instance._call = MethodType(
+                lambda inst, weights, y: other(weights, y) - self(weights, y),
+                new_instance,
+            )
+            new_instance._repr = MethodType(
+                lambda inst: "({}) - ({})".format(
+                    other.__repr__(), self.__repr__()
+                ),
+                new_instance,
+            )
+
+            return new_instance
+
+        elif isinstance(other, (int, float)):
             new_instance = Loss()
             new_instance._call = MethodType(
                 lambda inst, weights, y: other - self(weights, y), new_instance
