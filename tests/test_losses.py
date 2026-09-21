@@ -317,7 +317,7 @@ class TestAllLosses:
         ALL_LOSSES + [3],
         ids=[x.__name__ for x in ALL_LOSSES] + ["constant"],
     )
-    @pytest.mark.parametrize("op", ["add", "truediv", "mul", "pow"])
+    @pytest.mark.parametrize("op", ["add", "sub", "truediv", "mul", "pow"])
     def test_arithmetic(self, loss_class_r, op, Xy_dummy):
         _, y_dummy, _, _ = Xy_dummy
         n_samples, n_channels, horizon, n_assets = y_dummy.shape
@@ -350,7 +350,7 @@ class TestAllLosses:
             else loss_class_r,
         )
 
-        sign = {"add": "+", "truediv": "/", "mul": "*", "pow": "**"}[op]
+        sign = {"add": "+", "sub": "-", "truediv": "/", "mul": "*", "pow": "**"}[op]
 
         mixed_tensor = mixed_loss(weights, y_dummy)
 
@@ -374,6 +374,12 @@ class TestAllLosses:
 
         with pytest.raises(TypeError):
             "wrong" + Loss()
+
+        with pytest.raises(TypeError):
+            Loss() - "wrong"
+
+        with pytest.raises(TypeError):
+            "wrong" - Loss()
 
         with pytest.raises(TypeError):
             Loss() * "wrong"
@@ -416,7 +422,7 @@ class TestAllLosses:
         ALL_LOSSES + [3],
         ids=[x.__name__ for x in ALL_LOSSES] + ["constant"],
     )
-    @pytest.mark.parametrize("op", ["sum", "div", "mul", "pow"])
+    @pytest.mark.parametrize("op", ["sum", "sub", "div", "mul", "pow"])
     def test_repr_arithmetic(self, loss_class_l, loss_class_r, op):
         n_samples, n_assets, n_channels = 3, 4, 2
 
@@ -433,6 +439,9 @@ class TestAllLosses:
 
         if op == "sum":
             mixed = loss_instance_l + loss_instance_r
+
+        elif op == "sub":
+            mixed = loss_instance_l - loss_instance_r
 
         elif op == "mul":
             mixed = loss_instance_l * loss_instance_r
