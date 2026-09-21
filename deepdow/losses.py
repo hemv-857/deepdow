@@ -287,6 +287,26 @@ class Loss:
         """
         return self.__add__(other)
 
+    def __neg__(self):
+        """Negate a loss.
+
+        Returns
+        -------
+        new : Loss
+            Instance of a ``Loss`` representing ``-self``.
+        """
+        new_instance = Loss()
+        new_instance._call = MethodType(
+            lambda inst, weights, y: -self(weights, y),
+            new_instance,
+        )
+        new_instance._repr = MethodType(
+            lambda inst: "-({})".format(self.__repr__()),
+            new_instance,
+        )
+
+        return new_instance
+
     def __sub__(self, other):
         """Subtract a loss or constant from this loss.
 
@@ -308,7 +328,7 @@ class Loss:
                 new_instance,
             )
             new_instance._repr = MethodType(
-                lambda inst: "{} - {}".format(
+                lambda inst: "{} - ({})".format(
                     self.__repr__(), other.__repr__()
                 ),
                 new_instance,
@@ -349,7 +369,7 @@ class Loss:
                 lambda inst, weights, y: other - self(weights, y), new_instance
             )
             new_instance._repr = MethodType(
-                lambda inst: "{} - {}".format(other, self.__repr__()),
+                lambda inst: "({}) - ({})".format(other, self.__repr__()),
                 new_instance,
             )
 

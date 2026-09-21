@@ -396,6 +396,71 @@ class TestAllLosses:
         with pytest.raises(TypeError):
             Loss() ** "wrong"
 
+    def test_neg(self, Xy_dummy):
+        _, y_dummy, _, _ = Xy_dummy
+        n_samples, n_channels, horizon, n_assets = y_dummy.shape
+
+        weights = (torch.ones(n_samples, n_assets) / n_assets).to(
+            device=y_dummy.device, dtype=y_dummy.dtype
+        )
+
+        loss = SharpeRatio()
+        neg_loss = -loss
+
+        true_tensor = -loss(weights, y_dummy)
+        neg_tensor = neg_loss(weights, y_dummy)
+
+        assert torch.is_tensor(neg_tensor)
+        assert torch.allclose(neg_tensor, true_tensor)
+        assert neg_tensor.shape == (n_samples,)
+        assert "-" in repr(neg_loss)
+
+    def test_rsub(self, Xy_dummy):
+        _, y_dummy, _, _ = Xy_dummy
+        n_samples, n_channels, horizon, n_assets = y_dummy.shape
+
+        weights = (torch.ones(n_samples, n_assets) / n_assets).to(
+            device=y_dummy.device, dtype=y_dummy.dtype
+        )
+
+        loss = SharpeRatio()
+        constant = 5
+
+        # constant - loss
+        combined = constant - loss
+        true_tensor = constant - loss(weights, y_dummy)
+        combined_tensor = combined(weights, y_dummy)
+
+        assert torch.is_tensor(combined_tensor)
+        assert torch.allclose(combined_tensor, true_tensor)
+        assert combined_tensor.shape == (n_samples,)
+        assert repr(combined) == "({}) - ({})".format(constant, repr(loss))
+
+        # repr round-trip
+        recreated = eval(repr(combined))
+        recreated_tensor = recreated(weights, y_dummy)
+        assert torch.allclose(combined_tensor, recreated_tensor)
+
+    def test_sub_repr_roundtrip(self, Xy_dummy):
+        _, y_dummy, _, _ = Xy_dummy
+        n_samples, n_channels, horizon, n_assets = y_dummy.shape
+
+        weights = (torch.ones(n_samples, n_assets) / n_assets).to(
+            device=y_dummy.device, dtype=y_dummy.dtype
+        )
+
+        a = SharpeRatio()
+        b = Variance()
+        c = MaxDrawdown()
+
+        # a - (b - c): nested subtraction must preserve grouping
+        nested = a - (b - c)
+        nested_recreated = eval(repr(nested))
+
+        assert torch.allclose(
+            nested(weights, y_dummy), nested_recreated(weights, y_dummy)
+        )
+
     @pytest.mark.parametrize(
         "loss_class", ALL_LOSSES, ids=[x.__name__ for x in ALL_LOSSES]
     )
